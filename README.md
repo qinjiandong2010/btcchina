@@ -1,6 +1,6 @@
 btcchina
 ========
-提供国内3大比特币交易网站API接口：bitcchina、okcoin、chbtc（https://www.okcoin.com/  https://vip.btcchina.com/  https://www.chbtc.com/）。
+提供国内3大比特币交易网站统一API接口：bitcchina、okcoin、chbtc（https://www.okcoin.com/  https://vip.btcchina.com/  https://www.chbtc.com/）。
 
 API接口：
    (1)买入比特币。
