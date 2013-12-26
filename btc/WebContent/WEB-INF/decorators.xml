@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<decorators defaultdir="/WEB-INF/views/portal/decorators">
+    <excludes>
+        <pattern>/media/*</pattern>
+        <pattern>/js/*</pattern>
+        <pattern>/css/*</pattern>
+        <pattern>/img/*</pattern>
+        <pattern>/downloads/*</pattern>
+    </excludes>
+
+    <decorator name="login" page="portal_login.jsp">
+        <pattern>/login.html</pattern>
+        <pattern>/recover/*</pattern>
+    </decorator>
+    
+    <decorator name="portal" page="portal.jsp">
+        <pattern>/dashboard.html</pattern>
+        <pattern>/category/*</pattern>
+        <pattern>/accounts/*</pattern>
+        <pattern>/brand/*</pattern>
+        <pattern>/goods/*</pattern>
+        <pattern>/shop/*</pattern>
+        <pattern>/menu/*</pattern>
+        <pattern>/role/*</pattern>
+        <pattern>/errors/*</pattern>
+        <pattern>/result/*</pattern>
+    </decorator>
+
+</decorators>
