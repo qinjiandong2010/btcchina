@@ -17,7 +17,7 @@ public class BtcchinaWebTest {
 	public void login() throws IOException{
 		BtcchinaWeb btcchinaWeb = new BtcchinaWeb();
 		Resp result = btcchinaWeb.login("btcchinatest", "123456789");
-		log.info(result.toJSONString());
+		log.info(result.getMessage());
 		Assert.assertSame(result.getResult(), "0");
 	}
 	
@@ -31,6 +31,6 @@ public class BtcchinaWebTest {
 		
 		BtcchinaWeb btcchinaWeb = new BtcchinaWeb();
 		Resp result = btcchinaWeb.buyOrder(5225, 1,params);
-		log.info(result.toJSONString());
+		log.info(result.getMessage());
 	}
 }

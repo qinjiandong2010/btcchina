@@ -27,11 +27,11 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.log4j.Logger;
 
-import com.btcoin.BtcoinException;
 import com.btcoin.common.EnumConfig;
 import com.btcoin.common.JredisManager;
 import com.btcoin.common.Resp;
 import com.btcoin.common.SystemConfig;
+import com.btcoin.exception.BtcoinException;
 import com.btcoin.utils.PropertiesUtil;
 
 public abstract class AbstractBtcWeb {

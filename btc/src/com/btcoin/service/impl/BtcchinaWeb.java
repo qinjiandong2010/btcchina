@@ -30,10 +30,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import com.btcoin.BtcoinException;
 import com.btcoin.common.ErrorCode;
 import com.btcoin.common.JredisManager;
 import com.btcoin.common.Resp;
+import com.btcoin.exception.BtcoinException;
 import com.btcoin.service.AbstractBtcWeb;
 import com.btcoin.utils.StringUtil;
 
@@ -52,7 +52,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	private static final String getMarketDepth_url = "https://vip.btcchina.com/trade/depth";
 	private static final String getTicker_url = "https://data.btcchina.com/data/ticker";
 	private static final String getOrders_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login";
-	public static final String redisKey = "btcchina";
+	public static final String WEB_SERVICE_NAME = "btcchina";
 	
 	public JredisManager redisManager = JredisManager.getInstance();
 	
@@ -112,7 +112,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			                	return new Resp(ErrorCode.login_error$10103,"login failed.");
 			                } else {
 				                //保存用户cookies 到redis
-				                redisManager.getJedis().set(redisKey+String.format(":u:%s:sid", username),JSONArray.fromObject(cookies).toString());
+				                redisManager.getJedis().set(WEB_SERVICE_NAME+String.format(":u:%s:sid", username),JSONArray.fromObject(cookies).toString());
 				                log.info("save cookies to redis successful.");
 			                	for (int i = 0; i < cookies.size(); i++) {
 			                    	log.info("- " + cookies.get(i).toString());
@@ -135,16 +135,16 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	public Resp buyOrder(double price, double amount,JSONObject params) throws IOException {
 		
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			throw new BtcoinException(ErrorCode.un_require$10000, "username is require.");
+			return new Resp(ErrorCode.un_require$10000, "username is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"password") ){
-			throw new BtcoinException(ErrorCode.pwd_require$10001, "password is require.");
+			return new Resp(ErrorCode.pwd_require$10001, "password is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"tradepwd") ){
-			throw new BtcoinException(ErrorCode.tradepwd_require$10002, "tradepwd is require.");
+			return new Resp(ErrorCode.tradepwd_require$10002, "tradepwd is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"ordertype") ){
-			throw new BtcoinException(ErrorCode.ordertype_require$10003, "ordertype is require.");
+			return new Resp(ErrorCode.ordertype_require$10003, "ordertype is require.");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -160,19 +160,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpGet.setHeader("Host","vip.btcchina.com");  
 			httpGet.setHeader("Referer",buyOrder_url);
-			httpGet.setHeader("Cookie",super.getCookie(redisKey+String.format(":u:%s:sid", username)));
+			httpGet.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
 			
-			String no_csrf_buybtc = httpclient.execute(httpGet, new ResponseHandler<String>(){
+			Resp csrf = httpclient.execute(httpGet, new ResponseHandler<Resp>(){
 
 				@Override
-				public String handleResponse(HttpResponse arg0)
+				public Resp handleResponse(HttpResponse arg0)
 						throws ClientProtocolException, IOException {
 					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() >= 302) {
 				        	log.info("用户cookie已过期请重新登录!");
-				        	throw new BtcoinException(ErrorCode.session_timeout$10005,"The user cookie has expired, please login again.");
+				        	return new Resp(ErrorCode.session_timeout$10005,"The user cookie has expired, please login again.");
 				        }
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
@@ -181,20 +181,24 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
+	                    br.close();
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element usernameElement = doc.getElementById("username");
 						Element passwordElement = doc.getElementById("password");
 						//登录页面，cookie已经过期重新登录
 						if( usernameElement != null && passwordElement != null){
 							log.info("用户cookie已过期请重新登录!");
-							throw new BtcoinException(ErrorCode.session_timeout$10005,"用户cookie已过期请重新登录!");
+							return new Resp(ErrorCode.session_timeout$10005,"用户cookie已过期请重新登录!");
 						}
-						return doc.getElementById("no_csrf_buybtc").val();
+						return new Resp(ErrorCode.SUCCESS,"Success.",doc.getElementById("no_csrf_buybtc").val());
 					}finally{
 						response.close();
 					}
 				}
 			});
+			if(!ErrorCode.SUCCESS.equals(csrf.getRecode())){
+				return csrf;
+			}
 			
 			HttpPost httpPost = (HttpPost)super.createHttpRequest(HttpMethod.POST, buyOrder_url, true );
 			httpPost.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
@@ -204,11 +208,11 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpPost.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpPost.setHeader("Host","vip.btcchina.com");  
 			httpPost.setHeader("Referer",buyOrder_url);
-			httpPost.setHeader("Cookie",super.getCookie(redisKey+String.format(":u:%s:sid", username)));
+			httpPost.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
 			
 			List<NameValuePair> nvps = new ArrayList <NameValuePair>();  
 			nvps.add(new BasicNameValuePair("amount", amount+""));  
-			nvps.add(new BasicNameValuePair("no_csrf_buybtc", no_csrf_buybtc));  
+			nvps.add(new BasicNameValuePair("no_csrf_buybtc", csrf.getResult()+""));  
 			nvps.add(new BasicNameValuePair("ordertype", ordertype));  
 			nvps.add(new BasicNameValuePair("price", price+"")); 
 			nvps.add(new BasicNameValuePair("tradepwd", tradepwd)); 
@@ -222,7 +226,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() >= 302) {
 				        	log.info("用户cookie已过期请重新登录!");
-				        	throw new BtcoinException(ErrorCode.session_timeout$10005,"The user cookie has expired, please login again.");
+				        	return new Resp(ErrorCode.session_timeout$10005,"The user cookie has expired, please login again.");
 				        }
 						
 						HttpEntity entity = response.getEntity();
@@ -232,13 +236,15 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
+	                    //关闭流
+	                    br.close();
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element element = doc.select("div[class=alert alert-success]").first();
 						if( null != element){
 							return new Resp(ErrorCode.SUCCESS,element.text());
 						}else{
 							element = doc.select("div[class=alert alert-danger]").first();
-							throw new BtcoinException(ErrorCode.buy_error$10004,element.text());
+							return new Resp(ErrorCode.buy_error$10004,element.text());
 						}
 					}finally{
 						response.close();
@@ -253,16 +259,16 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	@Override
 	public Resp sellOrder(double price, double amount,JSONObject params) throws IOException,BtcoinException{
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			throw new BtcoinException(ErrorCode.un_require$10200, "username is require.");
+			return new Resp(ErrorCode.un_require$10200, "username is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"password") ){
-			throw new BtcoinException(ErrorCode.pwd_require$10201, "password is require.");
+			return new Resp(ErrorCode.pwd_require$10201, "password is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"tradepwd") ){
-			throw new BtcoinException(ErrorCode.tradepwd_require$10202, "tradepwd is require.");
+			return new Resp(ErrorCode.tradepwd_require$10202, "tradepwd is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"ordertype") ){
-			throw new BtcoinException(ErrorCode.ordertype_require$10203, "ordertype is require.");
+			return new Resp(ErrorCode.ordertype_require$10203, "ordertype is require.");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -278,19 +284,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpGet.setHeader("Host","vip.btcchina.com");  
 			httpGet.setHeader("Referer",sellOrder_url);
-			httpGet.setHeader("Cookie",super.getCookie(redisKey+String.format(":u:%s:sid", username)));
+			httpGet.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
 			
-			String no_csrf_sellbtc = httpclient.execute(httpGet, new ResponseHandler<String>(){
+			Resp csrf = httpclient.execute(httpGet, new ResponseHandler<Resp>(){
 
 				@Override
-				public String handleResponse(HttpResponse arg0)
+				public Resp handleResponse(HttpResponse arg0)
 						throws ClientProtocolException, IOException {
 					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() >= 302) {
 				        	log.info("用户cookie已过期请重新登录!");
-				        	throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+				        	return new Resp(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
 				        }
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
@@ -299,6 +305,8 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
+	                    //关闭流
+	                    br.close();
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						try{
 							Element usernameElement = doc.getElementById("username");
@@ -306,18 +314,22 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 							//登录页面，cookie已经过期重新登录
 							if( usernameElement != null && passwordElement != null){
 								log.info("用户cookie已过期请重新登录!");
-								throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+								return new Resp(ErrorCode.session_timeout$10205,"用户会话已过期,请重新登录!");
 							}
-							return doc.getElementById("no_csrf_sellbtc").val();
+							return new Resp(ErrorCode.SUCCESS,"Success.",doc.getElementById("no_csrf_sellbtc").val());
 						}catch (Exception e) {
 							log.error("get no_csrf_sellbtc error:"+e.getMessage());
-							throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+							return new Resp(ErrorCode.session_timeout$10205,"用户会话已过期,请重新登录!");
 						}
 					}finally{
 						response.close();
 					}
 				}
 			});
+			if(!ErrorCode.SUCCESS.equals(csrf.getRecode())){
+				return csrf;
+			}
+			
 			HttpPost httpPost = (HttpPost)super.createHttpRequest(HttpMethod.POST, sellOrder_url, true );
 			httpPost.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
 			httpPost.setHeader("Accept-Encoding","gzip, deflate"); 
@@ -326,11 +338,11 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpPost.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpPost.setHeader("Host","vip.btcchina.com");  
 			httpPost.setHeader("Referer",sellOrder_url);
-			httpPost.setHeader("Cookie",super.getCookie(redisKey+String.format(":u:%s:sid", username)));
+			httpPost.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
 			
 			List<NameValuePair> nvps = new ArrayList <NameValuePair>();  
 			nvps.add(new BasicNameValuePair("amount", amount+""));  
-			nvps.add(new BasicNameValuePair("no_csrf_sellbtc",no_csrf_sellbtc));  
+			nvps.add(new BasicNameValuePair("no_csrf_sellbtc",csrf.getResult()+""));  
 			nvps.add(new BasicNameValuePair("ordertype", ordertype));  
 			nvps.add(new BasicNameValuePair("price", price+"")); 
 			nvps.add(new BasicNameValuePair("tradepwd", tradepwd)); 
@@ -343,8 +355,8 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() >= 302) {
-				        	log.info("用户cookie已过期请重新登录!");
-				        	throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+				        	log.info("用户会话已过期,请重新登录!");
+				        	return new Resp(ErrorCode.session_timeout$10205,"用户会话已过期,请重新登录!");
 				        }
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
@@ -353,13 +365,15 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
+	                    //关闭流
+	                    br.close();
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element element = doc.select("div[class=alert alert-success]").first();
 						if( null != element){
 							return new Resp(ErrorCode.SUCCESS,element.text());
 						}else{
 							element = doc.select("span[class=help-inline]").first();
-							throw new BtcoinException(ErrorCode.sell_error$10204,element.text());
+							return new Resp(ErrorCode.sell_error$10204,element.text());
 						}
 					}finally{
 						response.close();
@@ -375,22 +389,22 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	public Resp getMarketDepth(final long limit,JSONObject params) throws IOException,BtcoinException{
 		
 		if( !StringUtil.isJSONObjectOk(params, "tradetype")){
-			throw new BtcoinException(ErrorCode.tradetype_require$10303,"tradettype is require.");
+			return new Resp(ErrorCode.tradetype_require$10303,"tradettype is require.");
 		}
 		String tradeType = params.getString("tradetype");
 		if( !"buy".equals(tradeType) && !"sell".equals(tradeType) ){
-			throw new BtcoinException(ErrorCode.tradetype_require$10303,"tradettype ranges [buy,sell].");
+			return new Resp(ErrorCode.tradetype_require$10303,"tradettype ranges [buy,sell].");
 		}
-		final String dataKey = redisKey+":getMarketDepth:"+tradeType;
+		final String dataKey = WEB_SERVICE_NAME+":getMarketDepth:"+tradeType;
 		boolean exists = redisManager.getJedis().exists(dataKey);
 		//如果redis有数据，从redis返回数据
 		if( exists ){
 			List<String> resList = redisManager.getJedis().lrange(dataKey, 0, limit);
-			return new Resp(ErrorCode.SUCCESS,"success",resList,null,null);
+			return new Resp(ErrorCode.SUCCESS,"success",resList);
 		}
 		
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			throw new BtcoinException(ErrorCode.un_require$10200, "username is require.");
+			return new Resp(ErrorCode.un_require$10200, "username is require.");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -404,7 +418,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpGet.setHeader("Host","vip.btcchina.com");  
 			httpGet.setHeader("Referer","https://vip.btcchina.com");
-			httpGet.setHeader("Cookie",super.getCookie(redisKey+String.format(":u:%s:sid", username)));
+			httpGet.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
 			
 			return httpclient.execute(httpGet, new ResponseHandler<Resp>(){
 
@@ -415,8 +429,8 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() >= 302) {
-				        	log.info("用户cookie已过期请重新登录!");
-				        	throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+				        	log.info("用户会话已过期,请重新登录!");
+				        	return new Resp(ErrorCode.session_timeout$10205,"用户会话已过期,请重新登录!");
 				        }
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
@@ -425,19 +439,21 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
+	                    //关闭流
+	                    br.close();
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element usernameElement = doc.getElementById("username");
 						Element passwordElement = doc.getElementById("password");
 						//登录页面，cookie已经过期重新登录
 						if( usernameElement != null && passwordElement != null){
-							log.info("用户cookie已过期请重新登录!");
-							throw new BtcoinException(ErrorCode.session_timeout$10205,"用户cookie已过期请重新登录!");
+							log.info("用户会话已过期,请重新登录!");
+							return new Resp(ErrorCode.session_timeout$10205,"用户会话已过期,请重新登录!");
 						}
 						Elements tables = doc.select("div table[class=table table-striped table-hover]");
 						
 						for (int i = 0,j = tables.size(); i < j; i ++) {
 							Elements trs = tables.get(i).select("tbody tr");
-							String key = redisKey+":getMarketDepth:"+(i == 0 ? "buy":"sell");
+							String key = WEB_SERVICE_NAME+":getMarketDepth:"+(i == 0 ? "buy":"sell");
 							for (Element tr : trs) {
 								JSONArray rowJson = new JSONArray();
 								Elements tds = tr.select("td");
@@ -449,7 +465,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 							redisManager.getJedis().expire(key, 60);
 						}
 						List<String> resList = redisManager.getJedis().lrange(dataKey, 0, limit);
-						return new Resp(ErrorCode.SUCCESS,"success",resList,null,null);
+						return new Resp(ErrorCode.SUCCESS,"success",resList);
 					}finally{
 						response.close();
 					}
@@ -487,9 +503,11 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	                    while(null != (line=br.readLine())){
 	                    	htmlDocument.append(line);
 	                    }
-						JSONObject tickerJson = JSONObject.fromObject(htmlDocument.toString());
-						redisManager.getJedis().set(redisKey+":ticker",tickerJson.toString());
-		                return new Resp(ErrorCode.SUCCESS,"success",null,null,tickerJson);
+	                    //关闭流
+	                    br.close();
+						JSONObject resultJson = JSONObject.fromObject(htmlDocument.toString());
+						JSONObject ticker = resultJson.getJSONObject("ticker");
+		                return new Resp(ErrorCode.SUCCESS,"success",ticker);
 					}finally{
 						response.close();
 					}
