@@ -1,26 +1,26 @@
 package com.btcoin.common;
 
 public class Resp {
-	String recode;
+	Integer recode;
 	String message;
 	Object result;
 
-	public Resp(String recode, String message) {
+	public Resp(int recode, String message) {
 		this.recode = recode;
 		this.message = message;
 	}
 	
-	public Resp(String recode, String message, Object result) {
+	public Resp(int recode, String message, Object result) {
 		this.recode = recode;
 		this.message = message;
 		this.result = result;
 	}
 
-	public String getRecode() {
+	public int getRecode() {
 		return recode;
 	}
 
-	public void setRecode(String recode) {
+	public void setRecode(int recode) {
 		this.recode = recode;
 	}
 

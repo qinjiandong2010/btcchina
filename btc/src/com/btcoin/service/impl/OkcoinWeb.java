@@ -44,6 +44,8 @@ public class OkcoinWeb extends AbstractBtcWeb{
 	private static final String getTicker_url = "https://www.okcoin.com/ticker.do";
 	public static final String WEB_SERVICE_NAME = "okcoin";
 
+	public JredisManager redisManager = JredisManager.getInstance();
+	
 	@Override
 	public Resp login(final String username, String password) throws IOException {
 		final BasicCookieStore cookieStore = new BasicCookieStore();
@@ -94,7 +96,6 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					                	log.info("None");
 					                } else {
 						                //保存用户cookies 到redis
-						                JredisManager redisManager = JredisManager.getInstance();
 						                redisManager.getJedis().set(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username),JSONArray.fromObject(cookies).toString());
 						                log.info("save cookies to redis successful.");
 					                	for (int i = 0; i < cookies.size(); i++) {
@@ -148,15 +149,15 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			throws IOException {
 		if(!StringUtil.isJSONObjectOk(params, "username")){
 			log.info("用户名不能为空。");
-			return new Resp(ErrorCode.FAILURE,"用户名不能为空。");
+			return new Resp(ErrorCode.un_require,"用户名不能为空。");
 		}
 		if(!StringUtil.isJSONObjectOk(params, "password")){
 			log.info("用户密码不能为空。");
-			return new Resp(ErrorCode.FAILURE,"用户密码不能为空。");
+			return new Resp(ErrorCode.pwd_require,"用户密码不能为空。");
 		}
-		if(!StringUtil.isJSONObjectOk(params, "tradePwd")){
+		if(!StringUtil.isJSONObjectOk(params, "tradepwd")){
 			log.info("交易密码不能为空。");
-			return new Resp(ErrorCode.FAILURE,"交易密码不能为空。");
+			return new Resp(ErrorCode.tradepwd_require,"交易密码不能为空。");
 		}
 		
 		CloseableHttpClient httpclient = this.getHttpClient();
@@ -164,7 +165,7 @@ public class OkcoinWeb extends AbstractBtcWeb{
 		try{
 			//{tradeAmount:tradeAmount,tradeCnyPrice:tradeCnyPrice,tradePwd:tradePwd,symbol:symbol};
 			int symbol = 0;
-			String tradePwd = params.getString("tradePwd");
+			String tradePwd = params.getString("tradepwd");
 			final String username = params.getString("username");
 			final String password = params.getString("password");
 			
@@ -184,16 +185,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			httpPost.setHeader("Referer","https://www.okcoin.com/");
 			
 			//读取redis用户Cookie
-			JredisManager redisManager = JredisManager.getInstance();
-			String data = redisManager.getJedis().get(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
-			if( data != null ){
-		        JSONArray cookies = JSONArray.fromObject(data);
-		        String cookieHeader = "";
-		        for (Object obj : cookies) {
-					JSONObject cookie = (JSONObject) obj;
-					cookieHeader += (cookie.getString("name")+"="+cookie.getString("value"))+";";
-				}
-		        httpPost.setHeader("Cookie",cookieHeader);
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+		        httpPost.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
 			}
 			return httpclient.execute(httpPost, new ResponseHandler<Resp>() {
 				@Override
@@ -273,22 +269,22 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			throws IOException {
 		if(!StringUtil.isJSONObjectOk(params, "username")){
 			log.info("用户名不能为空。");
-			return new Resp(ErrorCode.FAILURE,"用户名不能为空。");
+			return new Resp(ErrorCode.un_require,"用户名不能为空。");
 		}
 		if(!StringUtil.isJSONObjectOk(params, "password")){
 			log.info("用户密码不能为空。");
-			return new Resp(ErrorCode.FAILURE,"用户密码不能为空。");
+			return new Resp(ErrorCode.pwd_require,"用户密码不能为空。");
 		}
-		if(!StringUtil.isJSONObjectOk(params, "tradePwd")){
+		if(!StringUtil.isJSONObjectOk(params, "tradepwd")){
 			log.info("交易密码不能为空。");
-			return new Resp(ErrorCode.FAILURE,"交易密码不能为空。");
+			return new Resp(ErrorCode.tradepwd_require,"交易密码不能为空。");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		HttpPost httpPost = new HttpPost(String.format("%s?random=%s", sellOrder_url,Math.round(Math.random()*100)));
 		try{
 			//{tradeAmount:tradeAmount,tradeCnyPrice:tradeCnyPrice,tradePwd:tradePwd,symbol:symbol};
 			int symbol = 0;
-			String tradePwd = params.getString("tradePwd");
+			String tradePwd = params.getString("tradepwd");
 			List<NameValuePair> nvps = new ArrayList <NameValuePair>();  
 			nvps.add(new BasicNameValuePair("tradeAmount", amount+""));  
 			nvps.add(new BasicNameValuePair("symbol", symbol+""));  
@@ -308,17 +304,13 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			final String password = params.getString("password");
 			
 			//读取redis用户Cookie
-			JredisManager redisManager = JredisManager.getInstance();
-			String data = redisManager.getJedis().get(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
-			if( data != null ){
-		        JSONArray cookies = JSONArray.fromObject(data);
-		        String cookieHeader = "";
-		        for (Object obj : cookies) {
-					JSONObject cookie = (JSONObject) obj;
-					cookieHeader += (cookie.getString("name")+"="+cookie.getString("value"))+";";
-				}
-		        httpPost.setHeader("Cookie",cookieHeader);
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+		        httpPost.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
 			}
+			
 			return httpclient.execute(httpPost, new ResponseHandler<Resp>() {
 				@Override
 				public Resp handleResponse(HttpResponse arg0) throws ClientProtocolException, IOException {

@@ -13,7 +13,7 @@ public class JredisManager {
 	private static final Object lock = new Object();
 	
 	private JredisManager(){
-		jedis = new Jedis("localhost",6379);
+		jedis = new Jedis("172.16.30.210",6379);
 	}
 	
 	public void setJedis(Jedis jedis){
