@@ -39,7 +39,7 @@ public class OkcoinWeb extends AbstractBtcWeb{
 	private static final String buyOrder_url = "https://www.okcoin.com/trade/buyBtcSubmit.do";
 	private static final String sellOrder_url = "https://www.okcoin.com/trade/sellBtcSubmit.do";
 	private static final String cancelOrder_url = "";
-	private static final String getMarketDepth_url = "";
+	private static final String getMarketDepth_url = "https://www.okcoin.com/api/depth.do";
 	private static final String getOrders_url = "";
 	private static final String getTicker_url = "https://www.okcoin.com/ticker.do";
 	public static final String WEB_SERVICE_NAME = "okcoin";
@@ -391,10 +391,47 @@ public class OkcoinWeb extends AbstractBtcWeb{
 	}
 
 	@Override
-	public Resp getMarketDepth(long limit, JSONObject params)
+	public Resp getMarketDepth(JSONObject params)
 			throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		CloseableHttpClient httpclient = this.getHttpClient();
+		HttpGet httpGet = new HttpGet(getMarketDepth_url);
+		try{
+			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
+			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
+			httpGet.setHeader("Accept-Language","zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3"); 
+			httpGet.setHeader("Connection","keep-alive"); 
+			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
+			httpGet.setHeader("Host","www.okcoin.com");  
+			httpGet.setHeader("Referer","https://www.okcoin.com");
+			
+			return httpclient.execute(httpGet, new ResponseHandler<Resp>() {
+				@Override
+				public Resp handleResponse(HttpResponse arg0) throws ClientProtocolException, IOException {
+					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
+					try{
+						StatusLine status = response.getStatusLine();  
+				        if (status.getStatusCode() != 200) {  
+				            throw new NoHttpResponseException(  
+				                    "Did not receive successful HTTP response: status code = "  
+				                            + status.getStatusCode() + ", status message = ["  
+				                            + status.getReasonPhrase() + "]");  
+				        }
+						Scanner scan = new Scanner(response.getEntity().getContent());
+						String result = "";
+						try{ result = scan.nextLine(); }finally{scan.close(); }
+						if(StringUtil.isNullOrEmpty(result)){
+							return new Resp(ErrorCode.FAILURE,"无返回结果");
+						}
+						JSONObject dataJson = JSONObject.fromObject(result);
+						return new Resp(ErrorCode.SUCCESS,"查询成功",dataJson);
+					}finally{
+						response.close();
+					}
+				}
+			});
+		}finally{
+			httpclient.close();
+		}
 	}
 
 	@Override

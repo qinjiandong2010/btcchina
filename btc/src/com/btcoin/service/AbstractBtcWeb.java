@@ -129,9 +129,9 @@ public abstract class AbstractBtcWeb {
         }
     	//是否启用proxy代理连接
     	if( requestBase != null && proxy && SystemConfig.ENABLED_PROXY ){
-    		String host = PropertiesUtil.getProperty(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(), EnumConfig.proxy_host.getName());
+    		String host = PropertiesUtil.getProperty(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(), EnumConfig.proxy_host.getName(),"127.0.0.1");
     		int port = PropertiesUtil.getPropertyInt(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(), EnumConfig.proxy_port.getName(),8070);
-    		String protocol = PropertiesUtil.getProperty(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(), EnumConfig.proxy_protocol.getName());
+    		String protocol = PropertiesUtil.getProperty(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(), EnumConfig.proxy_protocol.getName(),"http");
     		//设置proxy代理连接
     		HttpHost proxyHost = new HttpHost(host, port, protocol);
             RequestConfig config = RequestConfig.custom().setProxy(proxyHost).build();
@@ -157,41 +157,60 @@ public abstract class AbstractBtcWeb {
 	public abstract Resp login(String username,String password) throws IOException,BtcoinException;
 	
 	/**
-	 * �±��ر��򵥡�
-	 * @param price  �� 1 ���ر���������ҵļ۸����֧��С���� 5 λ����
-	 * @param amount Ҫ��ı��ر����������֧��С���� 8 λ����
+	 * 下比特币买单
+	 * @param price
+	 * @param amount
+	 * @param params
 	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
 	 */
 	public abstract Resp buyOrder(double price,double amount,JSONObject params) throws IOException,BtcoinException;
 	
 	/**
-	 * �±��ر�������
-	 * @param price  �� 1 ���ر���������ҵļ۸����֧��С���� 5 λ����
-	 * @param amount Ҫ��ı��ر����������֧��С���� 8 λ����
+	 * 下比特币卖单。
+	 * @param price
+	 * @param amount
+	 * @param params
 	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
 	 */
 	public abstract Resp sellOrder(double price,double amount,JSONObject params) throws IOException,BtcoinException;
 	
 	/**
-	 * ȡ��һ����δ��ȫ�ɽ��Ĺҵ�����״̬Ӧ��Ϊ��open����
-	 * @param Ҫȡ��Ĺҵ��ￄ1�7 ID
+	 * 取消一个还未完全成交的挂单，其状态应该为“open”。
+	 * @param id
+	 * @param params
 	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
 	 */
 	public abstract Resp cancelOrder(long id,JSONObject params) throws IOException,BtcoinException;
 	
 	/**
-	 * ���������г���ȡ�����ȫ����δ�ɽ����򵥺������ￄ1�7
-	 * @param limit ���Ʒ��ص���������Ŀ��Ĭ������������10��
+	 * 获得完整的市场深度。返回全部尚未成交的买单和卖单。
+	 * @param params
 	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
 	 */
-	public abstract Resp getMarketDepth(long limit,JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp getMarketDepth(JSONObject params) throws IOException,BtcoinException;
 	
 	/**
-	 * ���ȫ���ҵ���״̬�ￄ1�7
-	 * @param openonly Ĭ��Ϊ��true�������Ϊ��true���������ػ�δ��ȫ�ɽ��Ĺҵ�
+	 * 获得全部挂单的状态。
+	 * @param openOnly
+	 * @param params
 	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
 	 */
 	public abstract Resp getOrders(double openOnly,JSONObject params) throws IOException,BtcoinException;
-
+	/**
+	 * 获取实时行情。
+	 * @return
+	 * @throws IOException
+	 * @throws BtcoinException
+	 */
 	public abstract Resp getTicker()throws IOException,BtcoinException;
 }

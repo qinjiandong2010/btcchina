@@ -112,7 +112,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			                	return new Resp(ErrorCode.login_error,"login failed.");
 			                } else {
 				                //保存用户cookies 到redis
-				                redisManager.getJedis().set(WEB_SERVICE_NAME+String.format(":u:%s:sid", username),JSONArray.fromObject(cookies).toString());
+				                redisManager.getJedis().set(WEB_SERVICE_NAME+String.format(":u:%s:cookies", username),JSONArray.fromObject(cookies).toString());
 				                log.info("save cookies to redis successful.");
 			                	for (int i = 0; i < cookies.size(); i++) {
 			                    	log.info("- " + cookies.get(i).toString());
@@ -398,30 +398,20 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	}
 	
 	@Override
-	public Resp getMarketDepth(final long limit,JSONObject params) throws IOException,BtcoinException{
-		
-		if( !StringUtil.isJSONObjectOk(params, "tradetype")){
-			return new Resp(ErrorCode.tradetype_require,"tradettype is require.");
-		}
-		String tradeType = params.getString("tradetype");
-		if( !"buy".equals(tradeType) && !"sell".equals(tradeType) ){
-			return new Resp(ErrorCode.tradetype_require,"tradettype ranges [buy,sell].");
-		}
-		final String dataKey = WEB_SERVICE_NAME+":getMarketDepth:"+tradeType;
-		boolean exists = redisManager.getJedis().exists(dataKey);
-		//如果redis有数据，从redis返回数据
-		if( exists ){
-			List<String> resList = redisManager.getJedis().lrange(dataKey, 0, limit);
-			return new Resp(ErrorCode.SUCCESS,"success",resList);
-		}
+	public Resp getMarketDepth(JSONObject params) throws IOException,BtcoinException{
 		
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
 			return new Resp(ErrorCode.un_require, "username is require.");
 		}
+		final String storeKey = WEB_SERVICE_NAME+":getMarketDepth";
+		if( redisManager.getJedis().exists(storeKey) ){
+			String depthData = redisManager.getJedis().get(storeKey);
+			return new Resp(ErrorCode.SUCCESS, "查询成功.",depthData);
+		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
 			final String username = params.getString("username");
-			
+
 			HttpGet httpGet = (HttpGet)createHttpRequest(HttpMethod.GET, getMarketDepth_url, true);
 			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
 			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
@@ -430,10 +420,14 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
 			httpGet.setHeader("Host","vip.btcchina.com");  
 			httpGet.setHeader("Referer","https://vip.btcchina.com");
-			httpGet.setHeader("Cookie",super.getCookie(WEB_SERVICE_NAME+String.format(":u:%s:sid", username)));
-			
+			//读取redis用户Cookie
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+				httpGet.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
+			}
 			return httpclient.execute(httpGet, new ResponseHandler<Resp>(){
-
 				@Override
 				public Resp handleResponse(HttpResponse arg0)
 						throws ClientProtocolException, IOException {
@@ -463,21 +457,25 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 						}
 						Elements tables = doc.select("div table[class=table table-striped table-hover]");
 						
+						JSONObject dataJson = new JSONObject();
 						for (int i = 0,j = tables.size(); i < j; i ++) {
 							Elements trs = tables.get(i).select("tbody tr");
-							String key = WEB_SERVICE_NAME+":getMarketDepth:"+(i == 0 ? "buy":"sell");
+							JSONArray rowsJson = new JSONArray();
 							for (Element tr : trs) {
 								JSONArray rowJson = new JSONArray();
 								Elements tds = tr.select("td");
 								for (Element td : tds) {
-									rowJson.add(td.text());
+									rowJson.add(td.text().replaceAll("¥|฿", ""));
 								}
-								redisManager.getJedis().rpush(key, rowJson.toString());
+								rowsJson.add(rowJson);
 							}
-							redisManager.getJedis().expire(key, 60);
+							String tradeType = (i == 0 ? "bids":"asks");
+							dataJson.put(tradeType, rowsJson.toString());
 						}
-						List<String> resList = redisManager.getJedis().lrange(dataKey, 0, limit);
-						return new Resp(ErrorCode.SUCCESS,"success",resList);
+						redisManager.getJedis().set(storeKey, dataJson.toString());
+						redisManager.getJedis().expire(storeKey, 60);
+						
+						return new Resp(ErrorCode.SUCCESS,"success",dataJson);
 					}finally{
 						response.close();
 					}

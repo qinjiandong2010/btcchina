@@ -1,7 +1,6 @@
 package com.btcoin.controller;
 
 import java.io.IOException;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -56,16 +55,14 @@ public class BtcController {
 		double amount = (Double)params.remove("amount");
 		return btcWeb.sellOrder(price, amount, params);
 	}
-	@RequestMapping(value="{market}/cancelOrder",method=RequestMethod.GET)
-	public @ResponseBody Resp cancelOrder(@PathVariable String market)throws IOException{
-		return null;
-	}
 	@RequestMapping(value="{market}/getMarketDepth",method=RequestMethod.GET)
-	public @ResponseBody Resp getMarketDepth(@PathVariable String market)throws IOException{
-		return null;
+	public @ResponseBody Resp getMarketDepth(@PathVariable String market,HttpServletRequest request)throws IOException{
+		AbstractBtcWeb btcWeb = BtcWebFactory.getInstance(market);
+		JSONObject params = JSONObject.fromObject(request.getParameterMap());
+		return btcWeb.getMarketDepth(params);
 	}
-	@RequestMapping(value="{market}/getOrder",method=RequestMethod.GET)
-	public @ResponseBody Resp getOrder(@PathVariable String market)throws IOException{
+	@RequestMapping(value="{market}/cancelOrder",method=RequestMethod.POST)
+	public @ResponseBody Resp cancelOrder(@PathVariable String market)throws IOException{
 		return null;
 	}
 	@RequestMapping(value="{market}/getOrders",method=RequestMethod.GET)

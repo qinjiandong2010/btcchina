@@ -1,6 +1,8 @@
 package com.btcoin.service.impl;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,8 +43,8 @@ public class ChbtcWeb extends AbstractBtcWeb {
 	private static final String buyOrder_url = "https://www.chbtc.com/u/transaction/entrust/doEntrust";
 	private static final String sellOrder_url = "https://www.chbtc.com/u/transaction/entrust/doEntrust";
 	private static final String cancelOrder_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login";
-	private static final String getMarketDepth_url = "https://vip.btcchina.com/trade/depth";
-	private static final String getTicker_url = "https://www.chbtc.com/data/webticker";
+	private static final String getMarketDepth_url = "http://api.chbtc.com/data/ltc/depth";
+	private static final String getTicker_url = "http://api.chbtc.com/data/ticker";
 	private static final String getOrders_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login";
 	public static final String WEB_SERVICE_NAME = "chbtc";
 	
@@ -85,8 +87,9 @@ public class ChbtcWeb extends AbstractBtcWeb {
 				        }else{
 							log.info("Login form get: " + response.getStatusLine());
 							Scanner scan = new Scanner(response.getEntity().getContent());
+							BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
 							String result = "";
-							try{ result = scan.nextLine(); }finally{scan.close(); }
+							try{ result = br.readLine(); }finally{br.close(); }
 							Document document = Jsoup.parse(result);
 							boolean isSuccess = Boolean.parseBoolean(document.select("State").text());
 							if( isSuccess ){
@@ -176,9 +179,9 @@ public class ChbtcWeb extends AbstractBtcWeb {
 				                            + status.getStatusCode() + ", status message = ["  
 				                            + status.getReasonPhrase() + "]");  
 				        }
-						Scanner scan = new Scanner(response.getEntity().getContent());
+				        BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
 						String result = "";
-						try{ result = scan.nextLine(); }finally{scan.close(); }
+						try{ result = br.readLine(); }finally{br.close(); }
 						Document document = Jsoup.parse(result);
 						boolean isSuccess = Boolean.parseBoolean(document.select("State").text());
 						if( isSuccess ){
@@ -255,9 +258,9 @@ public class ChbtcWeb extends AbstractBtcWeb {
 				                            + status.getStatusCode() + ", status message = ["  
 				                            + status.getReasonPhrase() + "]");  
 				        }
-						Scanner scan = new Scanner(response.getEntity().getContent());
+				        BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
 						String result = "";
-						try{ result = scan.nextLine(); }finally{scan.close(); }
+						try{ result = br.readLine(); }finally{br.close(); }
 						Document document = Jsoup.parse(result);
 						boolean isSuccess = Boolean.parseBoolean(document.select("State").text());
 						if( isSuccess ){
@@ -282,23 +285,10 @@ public class ChbtcWeb extends AbstractBtcWeb {
 	}
 
 	@Override
-	public Resp getMarketDepth(long limit, JSONObject params)
+	public Resp getMarketDepth(JSONObject params)
 			throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Resp getOrders(double openOnly, JSONObject params)
-			throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Resp getTicker() throws IOException, BtcoinException {
 		CloseableHttpClient httpclient = this.getHttpClient();
-		HttpGet httpGet = new HttpGet(String.format("%s?r=%s", getTicker_url,System.currentTimeMillis()));
+		HttpGet httpGet = new HttpGet(getMarketDepth_url);
 		try{
 			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
 			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
@@ -320,9 +310,59 @@ public class ChbtcWeb extends AbstractBtcWeb {
 				                            + status.getStatusCode() + ", status message = ["  
 				                            + status.getReasonPhrase() + "]");  
 				        }
-						Scanner scan = new Scanner(response.getEntity().getContent());
+				        BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
 						String result = "";
-						try{ result = scan.nextLine(); }finally{scan.close(); }
+						try{ result = br.readLine(); }finally{br.close(); }
+						if(StringUtil.isNullOrEmpty(result)){
+							return new Resp(ErrorCode.FAILURE,"无返回结果");
+						}
+						JSONObject dataJson = JSONObject.fromObject(result);
+						return new Resp(ErrorCode.SUCCESS,"查询成功",dataJson);
+					}finally{
+						response.close();
+					}
+				}
+			});
+		}finally{
+			httpclient.close();
+		}
+	}
+
+	@Override
+	public Resp getOrders(double openOnly, JSONObject params)
+			throws IOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Resp getTicker() throws IOException, BtcoinException {
+		CloseableHttpClient httpclient = this.getHttpClient();
+		HttpGet httpGet = new HttpGet(getTicker_url);
+		try{
+			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
+			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
+			httpGet.setHeader("Accept-Language","zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3"); 
+			httpGet.setHeader("Connection","keep-alive"); 
+			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
+			httpGet.setHeader("Host","www.chbtc.com");  
+			httpGet.setHeader("Referer","https://www.chbtc.com/");
+			
+			return httpclient.execute(httpGet, new ResponseHandler<Resp>() {
+				@Override
+				public Resp handleResponse(HttpResponse arg0) throws ClientProtocolException, IOException {
+					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
+					try{
+						StatusLine status = response.getStatusLine();  
+				        if (status.getStatusCode() != 200) {  
+				            throw new NoHttpResponseException(  
+				                    "Did not receive successful HTTP response: status code = "  
+				                            + status.getStatusCode() + ", status message = ["  
+				                            + status.getReasonPhrase() + "]");  
+				        }
+				        BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
+						String result = "";
+						try{ result = br.readLine(); }finally{br.close(); }
 						if(StringUtil.isNullOrEmpty(result)){
 							return new Resp(ErrorCode.FAILURE,"无返回结果");
 						}
@@ -345,5 +385,4 @@ public class ChbtcWeb extends AbstractBtcWeb {
 			httpclient.close();
 		}
 	}
-
 }

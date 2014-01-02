@@ -2,10 +2,11 @@ package com.btcoin.service;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
-import org.junit.Assert;
 import org.junit.Test;
 
 import com.btcoin.common.Resp;
@@ -46,6 +47,12 @@ public class ChbtcWebTest {
 	public void getTicker() throws IOException{
 		AbstractBtcWeb web = new ChbtcWeb();
 		Resp result = web.getTicker();
+		log.info(result.getResult());
+	}
+	@Test
+	public void getMarketDepth() throws IOException{
+		AbstractBtcWeb web = new ChbtcWeb();
+		Resp result = web.getMarketDepth(null);
 		log.info(result.getResult());
 	}
 }

@@ -29,9 +29,13 @@ public class PropertiesUtil {
 	/**
 	 * 获取key值
 	 */
-	public static String getProperty(String filename,String key) {
+	public static String getProperty(String filename,String key,String defaultVulate) {
 		Properties properties = getProperties(filename);
-		return properties.getProperty(key);
+		String value = properties.getProperty(key);
+		if(StringUtil.isNullOrEmpty(value)){
+			value = defaultVulate;
+		}
+		return value;
 	}
 	/**
 	 * 获取boolean值

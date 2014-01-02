@@ -1,5 +1,7 @@
 package com.btcoin.common;
 
+import com.btcoin.utils.PropertiesUtil;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import redis.clients.jedis.Jedis;
@@ -13,7 +15,9 @@ public class JredisManager {
 	private static final Object lock = new Object();
 	
 	private JredisManager(){
-		jedis = new Jedis("172.16.30.210",6379);
+		String host = PropertiesUtil.getProperty(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(),EnumConfig.redis_host.getName(), "127.0.0.1");
+		int port = PropertiesUtil.getPropertyInt(EnumConfig.FILE_SYSCONF_PROPERTIES.getName(),EnumConfig.redis_port.getName(), 6379);
+		jedis = new Jedis(host,port);
 	}
 	
 	public void setJedis(Jedis jedis){

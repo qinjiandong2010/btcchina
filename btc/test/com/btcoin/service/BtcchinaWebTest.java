@@ -20,7 +20,6 @@ public class BtcchinaWebTest {
 		log.info(result.getMessage());
 		Assert.assertSame(result.getResult(), "0");
 	}
-	
 	@Test
 	public void buyOrder() throws IOException{
 		JSONObject params = new JSONObject();
@@ -32,5 +31,20 @@ public class BtcchinaWebTest {
 		BtcchinaWeb btcchinaWeb = new BtcchinaWeb();
 		Resp result = btcchinaWeb.buyOrder(5225, 1,params);
 		log.info(result.getMessage());
+	}
+	@Test
+	public void getTicker() throws IOException{
+		AbstractBtcWeb web = new BtcchinaWeb();
+		Resp result = web.getTicker();
+		log.info(result.getResult());
+	}
+	@Test
+	public void getMarketDepth() throws IOException{
+		JSONObject params = new JSONObject();
+		params.put("username", "btcchinatest");
+		
+		AbstractBtcWeb web = new BtcchinaWeb();
+		Resp result = web.getMarketDepth(params);
+		log.info(result.toString());
 	}
 }

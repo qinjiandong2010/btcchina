@@ -1,5 +1,7 @@
 package com.btcoin.common;
 
+import net.sf.json.JSONObject;
+
 public class Resp {
 	Integer recode;
 	String message;
@@ -40,4 +42,7 @@ public class Resp {
 		this.result = result;
 	}
 
+	public String toString(){
+		return JSONObject.fromObject(this).toString();
+	}
 }
