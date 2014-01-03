@@ -79,7 +79,11 @@ public class ChbtcWeb extends AbstractBtcWeb {
 					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
 					try{
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -173,7 +177,11 @@ public class ChbtcWeb extends AbstractBtcWeb {
 					try{
 						log.info("Login form get: " + response.getStatusLine());
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]购买比特币失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -253,6 +261,10 @@ public class ChbtcWeb extends AbstractBtcWeb {
 						log.info("Login form get: " + response.getStatusLine());
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() != 200) {  
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]卖出比特币失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -305,6 +317,9 @@ public class ChbtcWeb extends AbstractBtcWeb {
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() != 200) {  
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],获取深度行情失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase()));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -355,6 +370,9 @@ public class ChbtcWeb extends AbstractBtcWeb {
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() != 200) {  
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],获取实时行情失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase()));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  

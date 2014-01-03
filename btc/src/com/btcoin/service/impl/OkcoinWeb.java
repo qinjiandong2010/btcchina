@@ -74,6 +74,10 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() != 200) {  
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -114,7 +118,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 										log.info("此ip登录频繁，请2小时后再试");
 										return new Resp(ErrorCode.FAILURE,"此ip登录频繁，请2小时后再试");
 									}else if(errorNum == -1){
-										log.info("外部系统返回结果异常");
+										log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败,return[%s]。", 
+			        							status.getStatusCode(),
+			        							status.getReasonPhrase(),
+			        							username,
+			        							jsonObject.toString()));
 										return new Resp(ErrorCode.FAILURE,"外部系统返回结果异常");
 									}else{
 										log.info("用户名或密码错误，您还有"+errorNum+"次机会");
@@ -127,7 +135,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 									log.info("账户出现安全隐患被冻结，请尽快联系客服。");
 									return new Resp(ErrorCode.FAILURE,"账户出现安全隐患被冻结，请尽快联系客服。");
 								}else if( -100 == resultCode ){
-									log.info("外部系统返回结果异常");
+									log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败,return[%s]。", 
+		        							status.getStatusCode(),
+		        							status.getReasonPhrase(),
+		        							username,
+		        							jsonObject.toString()));
 									return new Resp(ErrorCode.FAILURE,"外部系统返回结果异常");
 								}
 							}
@@ -198,7 +210,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					try{
 						log.info("Login form get: " + response.getStatusLine());
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]购买比特币失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -252,7 +268,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 								return new Resp(ErrorCode.FAILURE,"账户出现安全隐患已被冻结，请尽快联系客服。");
 							}
 						}
-						log.info("外部系统返回结果异常");
+						log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]购买比特币失败,return[%s]。", 
+    							status.getStatusCode(),
+    							status.getReasonPhrase(),
+    							username,
+    							result));
 						return new Resp(ErrorCode.FAILURE,"外部系统返回结果异常");
 					}finally{
 						response.close();
@@ -318,7 +338,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					try{
 						log.info("Login form get: " + response.getStatusLine());
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]卖出比特币失败。", 
+	    							status.getStatusCode(),
+	    							status.getReasonPhrase(),
+	    							username));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -372,7 +396,11 @@ public class OkcoinWeb extends AbstractBtcWeb{
 								return new Resp(ErrorCode.FAILURE,"账户出现安全隐患已被冻结，请尽快联系客服。");
 							}
 						}
-						log.info("外部系统返回结果异常");
+						log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]购买比特币失败,return[%s]。", 
+    							status.getStatusCode(),
+    							status.getReasonPhrase(),
+    							username,
+    							result));
 						return new Resp(ErrorCode.FAILURE,"外部系统返回结果异常");
 					}finally{
 						response.close();
@@ -410,7 +438,10 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
 					try{
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],获取深度行情失败。", 
+	    							status.getStatusCode(),
+	    							status.getReasonPhrase()));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -460,7 +491,10 @@ public class OkcoinWeb extends AbstractBtcWeb{
 					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
 					try{
 						StatusLine status = response.getStatusLine();  
-				        if (status.getStatusCode() != 200) {  
+				        if (status.getStatusCode() != 200) { 
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],获取实时行情失败。", 
+	    							status.getStatusCode(),
+	    							status.getReasonPhrase()));
 				            throw new NoHttpResponseException(  
 				                    "Did not receive successful HTTP response: status code = "  
 				                            + status.getStatusCode() + ", status message = ["  
@@ -491,5 +525,4 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			httpclient.close();
 		}
 	}
-
 }

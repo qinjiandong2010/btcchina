@@ -6,6 +6,8 @@ public class ErrorCode {
 	
 	public static int SUCCESS = 0;
 	public static int FAILURE = 1;
+	
+	public static final int sys_err=2;
 	/**
 	 * redis 连接异常
 	 */

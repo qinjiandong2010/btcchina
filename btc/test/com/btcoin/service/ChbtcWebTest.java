@@ -9,17 +9,28 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
+import redis.clients.jedis.exceptions.JedisConnectionException;
+
 import com.btcoin.common.Resp;
+import com.btcoin.exception.BtcoinException;
 import com.btcoin.service.impl.ChbtcWeb;
 
 public class ChbtcWebTest {
 	private static Logger log = Logger.getLogger(ChbtcWebTest.class);
 	@Test
-	public void login() throws IOException{
+	public void login(){
 		AbstractBtcWeb web = new ChbtcWeb();
-		Resp result = web.login("smallbeetle", "smallbeetle");
-		log.info(result.getMessage());
-		Assert.assertSame(result.getRecode(), 0);
+		try {
+			Resp result = web.login("smallbeetle", "smallbeetle");
+			log.info(result.getMessage());
+			Assert.assertSame(result.getRecode(), 0);
+		} catch (BtcoinException err) {
+			log.error("BTC API内部异常:"+err.getMessage());
+		} catch (JedisConnectionException err){
+			log.error("Redis 连接异常:"+err.getMessage());
+		}catch (IOException err) {
+			log.error("未知异常",err);
+		}
 	}
 	@Test
 	public void buyOrder() throws IOException{

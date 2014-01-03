@@ -94,21 +94,31 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 					try{
 						StatusLine status = response.getStatusLine();  
 				        if (status.getStatusCode() > 302) {  
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败。", 
+        							status.getStatusCode(),
+        							status.getReasonPhrase(),
+        							username));
 				        	return new Resp(ErrorCode.login_error,"Did not receive successful HTTP response: status code = "  
 		                            + status.getStatusCode() + ", status message = ["  
 		                            + status.getReasonPhrase() + "]");
 				        }else{
 							Header[] locations = response.getHeaders("Location");
 							if( locations.length == 0 ){
-								log.error("Login failed.");
-								return new Resp(ErrorCode.login_error,"login failed.");
+					        	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败。", 
+	        							status.getStatusCode(),
+	        							status.getReasonPhrase(),
+	        							username));
+								return new Resp(ErrorCode.login_error,"登录失败.");
 							}
 							log.info("Login form get: " + response.getStatusLine());
 
 							log.info("Post logon cookies:");
 			                List<Cookie> cookies = cookieStore.getCookies();
 			                if (cookies.isEmpty()) {
-			                	log.info("None");
+			                	log.error(String.format("HTTP response:status code=%s, status message=[%s],用户[%s]登录失败。", 
+	        							status.getStatusCode(),
+	        							status.getReasonPhrase(),
+	        							username));
 			                	return new Resp(ErrorCode.login_error,"login failed.");
 			                } else {
 				                //保存用户cookies 到redis
@@ -465,7 +475,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 								JSONArray rowJson = new JSONArray();
 								Elements tds = tr.select("td");
 								for (Element td : tds) {
-									rowJson.add(td.text().replaceAll("¥|฿", ""));
+									rowJson.add(Double.parseDouble(td.text().replaceAll(",|¥|฿", "")));
 								}
 								rowsJson.add(rowJson);
 							}
