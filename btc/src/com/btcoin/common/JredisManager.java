@@ -1,10 +1,8 @@
 package com.btcoin.common;
 
-import com.btcoin.utils.PropertiesUtil;
-
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 import redis.clients.jedis.Jedis;
+
+import com.btcoin.utils.PropertiesUtil;
 
 public class JredisManager {
 	
@@ -29,7 +27,7 @@ public class JredisManager {
 	}
 	
 	/**
-	 * ��ȡһ��redist clientl��
+	 * 创建Jredis管理实例
 	 * @return
 	 */
 	public static JredisManager getInstance(){
@@ -41,14 +39,5 @@ public class JredisManager {
 			}
 		}
 		return jredisManager;
-	}
-	public static void main(String []s){
-		JredisManager redisManager = JredisManager.getInstance();
-        String result = redisManager.getJedis().hget("btcchina", "user:btcchinatest:cookies");
-        JSONArray cookies = JSONArray.fromObject(result);
-        for (Object obj : cookies) {
-			JSONObject cookie = (JSONObject) obj;
-			System.out.println(cookie.getString("name")+"="+cookie.getString("value"));
-		}
 	}
 }

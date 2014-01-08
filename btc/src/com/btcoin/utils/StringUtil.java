@@ -184,7 +184,7 @@ public class StringUtil {
 	 */
 	public static boolean isJSON(String param) {
 		try {
-			JSONObject jo = JSONObject.fromObject(param);
+			JSONObject.fromObject(param);
 			return true;
 		} catch (Exception e) {
 			return false;
@@ -306,6 +306,7 @@ public class StringUtil {
 	 * 检查JSON元素是否存在或为空
 	 * 
 	 */
+	@SuppressWarnings("unchecked")
 	public static boolean isMapOk(Map jso,String key){
 		if(jso.containsKey(key) && jso.get(key)!=null && !"".equals(jso.get(key)))
 			return true;

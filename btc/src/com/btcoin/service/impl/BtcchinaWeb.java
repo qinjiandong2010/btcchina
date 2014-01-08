@@ -33,8 +33,8 @@ import org.jsoup.select.Elements;
 import com.btcoin.common.ErrorCode;
 import com.btcoin.common.JredisManager;
 import com.btcoin.common.Resp;
-import com.btcoin.exception.BtcoinException;
-import com.btcoin.service.AbstractBtcWeb;
+import com.btcoin.exception.BTCException;
+import com.btcoin.service.AbstractBTCWeb;
 import com.btcoin.utils.StringUtil;
 
 /**
@@ -42,22 +42,22 @@ import com.btcoin.utils.StringUtil;
  * @author Administrator
  *
  */
-public class BtcchinaWeb extends AbstractBtcWeb{
+public class BTCChinaWeb extends AbstractBTCWeb{
 
-	private static final Logger log = Logger.getLogger(BtcchinaWeb.class);
+	private static final Logger log = Logger.getLogger(BTCChinaWeb.class);
 	private static final String login_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login&change_lang=zh_cmn_hans";
 	private static final String buyOrder_url = "https://vip.btcchina.com/trade/buy";
 	private static final String sellOrder_url = "https://vip.btcchina.com/trade/sell";
-	private static final String cancelOrder_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login";
+	private static final String cancelOrder_url = "https://vip.btcchina.com/trade/cancel/id/%s";
 	private static final String getMarketDepth_url = "https://vip.btcchina.com/trade/depth";
 	private static final String getTicker_url = "https://data.btcchina.com/data/ticker";
-	private static final String getOrders_url = "https://vip.btcchina.com/bbs/ucp.php?mode=login";
+	private static final String getOrders_url = "https://vip.btcchina.com/trade/order";
 	public static final String WEB_SERVICE_NAME = "btcchina";
 	
 	public JredisManager redisManager = JredisManager.getInstance();
 	
 	@Override
-	public Resp login(final String username, String password) throws IOException,BtcoinException{
+	public Resp login(final String username, String password) throws IOException,BTCException{
 		
 		if( StringUtil.isEmpty(username) ){
 			return new Resp(ErrorCode.un_require,"username is require.");
@@ -108,7 +108,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	        							status.getStatusCode(),
 	        							status.getReasonPhrase(),
 	        							username));
-								return new Resp(ErrorCode.login_error,"登录失败.");
+								return new Resp(ErrorCode.login_error,String.format("用户[%s]登录失败。", username));
 							}
 							log.info("Login form get: " + response.getStatusLine());
 
@@ -131,7 +131,6 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        }
 				        return new Resp(ErrorCode.SUCCESS,"Login success.");
 					}finally{
-						//这里加上会报sockie is close异常
 						//response.close();
 					}
 				}
@@ -145,16 +144,17 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	public Resp buyOrder(double price, double amount,JSONObject params) throws IOException {
 		
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			return new Resp(ErrorCode.un_require, "username is require.");
+			return new Resp(ErrorCode.un_require, "用户名不能为空.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"password") ){
 			return new Resp(ErrorCode.pwd_require, "password is require.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"tradepwd") ){
-			return new Resp(ErrorCode.tradepwd_require, "tradepwd is require.");
+			return new Resp(ErrorCode.tradepwd_require, "交易密码不能为空.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"ordertype") ){
-			return new Resp(ErrorCode.ordertype_require, "ordertype is require.");
+			params.put("ordertype", "limit");
+			//return new Resp(ErrorCode.ordertype_require, "ordertype is require.");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -190,14 +190,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        	log.info("用户cookie已过期请重新登录!");
 				        	return new Resp(ErrorCode.session_timeout,"The user cookie has expired, please login again.");
 				        }
-						HttpEntity entity = response.getEntity();
+				        HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element usernameElement = doc.getElementById("username");
 						Element passwordElement = doc.getElementById("password");
@@ -244,16 +249,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        	log.info("用户cookie已过期请重新登录!");
 				        	return new Resp(ErrorCode.session_timeout,"The user cookie has expired, please login again.");
 				        }
-						
-						HttpEntity entity = response.getEntity();
+				        HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    //关闭流
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element element = doc.select("div[class=alert alert-success]").first();
 						if( null != element){
@@ -273,18 +281,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	}
 
 	@Override
-	public Resp sellOrder(double price, double amount,JSONObject params) throws IOException,BtcoinException{
+	public Resp sellOrder(double price, double amount,JSONObject params) throws IOException,BTCException{
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			return new Resp(ErrorCode.un_require, "username is require.");
+			return new Resp(ErrorCode.un_require, "用户名不能为空.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"password") ){
-			return new Resp(ErrorCode.pwd_require, "password is require.");
+			return new Resp(ErrorCode.pwd_require, "密码不能为空.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"tradepwd") ){
-			return new Resp(ErrorCode.tradepwd_require, "tradepwd is require.");
+			return new Resp(ErrorCode.tradepwd_require, "交易密码不能为空.");
 		}
 		if( !StringUtil.isJSONObjectOk(params,"ordertype") ){
-			return new Resp(ErrorCode.ordertype_require, "ordertype is require.");
+			params.put("ordertype", "limit");
+			//return new Resp(ErrorCode.ordertype_require, "ordertype is require.");
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -320,15 +329,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        	log.info("用户cookie已过期请重新登录!");
 				        	return new Resp(ErrorCode.session_timeout,"用户cookie已过期请重新登录!");
 				        }
-						HttpEntity entity = response.getEntity();
+				        HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    //关闭流
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						try{
 							Element usernameElement = doc.getElementById("username");
@@ -380,15 +393,19 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        	log.info("用户会话已过期,请重新登录!");
 				        	return new Resp(ErrorCode.session_timeout,"用户会话已过期,请重新登录!");
 				        }
-						HttpEntity entity = response.getEntity();
+				        HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    //关闭流
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element element = doc.select("div[class=alert alert-success]").first();
 						if( null != element){
@@ -408,15 +425,16 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	}
 	
 	@Override
-	public Resp getMarketDepth(JSONObject params) throws IOException,BtcoinException{
+	public Resp getMarketDepth(JSONObject params) throws IOException,BTCException{
 		
 		if( !StringUtil.isJSONObjectOk(params,"username") ){
-			return new Resp(ErrorCode.un_require, "username is require.");
+			return new Resp(ErrorCode.un_require, "用户名不能为空.");
 		}
 		final String storeKey = WEB_SERVICE_NAME+":getMarketDepth";
 		if( redisManager.getJedis().exists(storeKey) ){
 			String depthData = redisManager.getJedis().get(storeKey);
-			return new Resp(ErrorCode.SUCCESS, "查询成功.",depthData);
+			JSONObject dataJson = JSONObject.fromObject(depthData);
+			return new Resp(ErrorCode.SUCCESS, "查询成功.",dataJson);
 		}
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
@@ -450,13 +468,17 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 				        }
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    //关闭流
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						Document doc = Jsoup.parse(htmlDocument.toString());
 						Element usernameElement = doc.getElementById("username");
 						Element passwordElement = doc.getElementById("password");
@@ -497,7 +519,7 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	}
 
 	@Override
-	public Resp getTicker() throws IOException, BtcoinException {
+	public Resp getTicker() throws IOException, BTCException {
 		CloseableHttpClient httpclient = this.getHttpClient();
 		try{
 			HttpGet httpGet = (HttpGet)createHttpRequest(HttpMethod.GET, getTicker_url, true);
@@ -518,13 +540,17 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 					try{
 						HttpEntity entity = response.getEntity();
 						StringBuilder htmlDocument = new StringBuilder();
-						BufferedReader br = new BufferedReader(new InputStreamReader(entity.getContent()));
-	                    String line = "";
-	                    while(null != (line=br.readLine())){
-	                    	htmlDocument.append(line);
-	                    }
-	                    //关闭流
-	                    br.close();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent()));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
 						JSONObject resultJson = JSONObject.fromObject(htmlDocument.toString());
 						JSONObject ticker = resultJson.getJSONObject("ticker");
 		                return new Resp(ErrorCode.SUCCESS,"success",ticker);
@@ -539,13 +565,160 @@ public class BtcchinaWeb extends AbstractBtcWeb{
 	}
 
 	@Override
-	public Resp cancelOrder(long id,JSONObject params) throws IOException,BtcoinException{
-		// TODO Auto-generated method stub
-		return null;
+	public Resp cancelOrder(long id,JSONObject params) throws IOException,BTCException{
+		if( !StringUtil.isJSONObjectOk(params,"username") ){
+			return new Resp(ErrorCode.un_require, "用户名不能为空.");
+		}
+		CloseableHttpClient httpclient = this.getHttpClient();
+		try{
+			final String username = params.getString("username");
+
+			HttpGet httpGet = (HttpGet)createHttpRequest(HttpMethod.GET, String.format(cancelOrder_url, id), true);
+			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
+			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
+			httpGet.setHeader("Accept-Language","zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3"); 
+			httpGet.setHeader("Connection","keep-alive"); 
+			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
+			httpGet.setHeader("Host","vip.btcchina.com");  
+			httpGet.setHeader("Referer","https://vip.btcchina.com/trade/order");
+			//读取redis用户Cookie
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+				httpGet.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
+			}
+			return httpclient.execute(httpGet, new ResponseHandler<Resp>(){
+				@Override
+				public Resp handleResponse(HttpResponse arg0)
+						throws ClientProtocolException, IOException {
+					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
+					try{
+						StatusLine status = response.getStatusLine();  
+				        if (status.getStatusCode() >= 302) {
+				        	log.info("用户会话已过期,请重新登录!");
+				        	return new Resp(ErrorCode.session_timeout,"用户会话已过期,请重新登录!");
+				        }
+						HttpEntity entity = response.getEntity();
+						StringBuilder htmlDocument = new StringBuilder();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
+						return new Resp(ErrorCode.SUCCESS,"撤单成功");
+					}finally{
+						response.close();
+					}
+				}
+			});
+		}finally{
+			httpclient.close();
+		}
 	}
-	
+	/*
+	 * 
+		type	 string	 挂单类型。可能值：bid 或 ask
+		price	 number	 价格
+		currency	 string	 货币代码。可能值：CNY 或 BTC
+		amount	 number	 挂单剩余数量。如果此值小于 amount_original，说明此挂单仅有部分成交
+		amount_original	 number	 初始挂单数量
+		date	 integer	 Unix 时间戳。自1970年1月1日以来的秒数
+		status	 string	 挂单状态。可能值：open、closed 或 cancelled 
+	 */
 	@Override
-	public Resp getOrders(double openOnly,JSONObject params) throws IOException,BtcoinException{
-		return null;
+	public Resp getOrders(boolean openOnly,JSONObject params) throws IOException,BTCException{
+
+		if( !StringUtil.isJSONObjectOk(params,"username") ){
+			return new Resp(ErrorCode.un_require, "用户名不能为空.");
+		}
+		CloseableHttpClient httpclient = this.getHttpClient();
+		try{
+			final String username = params.getString("username");
+
+			HttpGet httpGet = (HttpGet)createHttpRequest(HttpMethod.GET, getOrders_url, true);
+			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
+			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
+			httpGet.setHeader("Accept-Language","zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3"); 
+			httpGet.setHeader("Connection","keep-alive"); 
+			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
+			httpGet.setHeader("Host","vip.btcchina.com");  
+			httpGet.setHeader("Referer","https://vip.btcchina.com");
+			//读取redis用户Cookie
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+				httpGet.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
+			}
+			return httpclient.execute(httpGet, new ResponseHandler<Resp>(){
+				@Override
+				public Resp handleResponse(HttpResponse arg0)
+						throws ClientProtocolException, IOException {
+					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
+					try{
+						StatusLine status = response.getStatusLine();  
+				        if (status.getStatusCode() >= 302) {
+				        	log.info("用户会话已过期,请重新登录!");
+				        	return new Resp(ErrorCode.session_timeout,"用户会话已过期,请重新登录!");
+				        }
+						HttpEntity entity = response.getEntity();
+						StringBuilder htmlDocument = new StringBuilder();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(entity.getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
+						Document doc = Jsoup.parse(htmlDocument.toString());
+						Element usernameElement = doc.getElementById("username");
+						Element passwordElement = doc.getElementById("password");
+						//登录页面，cookie已经过期重新登录
+						if( usernameElement != null && passwordElement != null){
+							log.info("用户会话已过期,请重新登录!");
+							return new Resp(ErrorCode.session_timeout,"用户会话已过期,请重新登录!");
+						}
+						Element table = doc.select("div[class=table-responsive] table").first();
+						if( table == null ){
+							return new Resp(ErrorCode.FAILURE,"您暂无挂单。");
+						}
+						Elements trs = table.select("tbody tr");
+						JSONArray rowsJson = new JSONArray();
+						String[] columns = {"date","type","amount_original","price","amount","unfillamount","status"};
+						for (Element tr : trs) {
+							JSONObject rowJson = new JSONObject();
+							Elements tds = tr.select("td");
+							for (int j = 0; j < tds.size(); j++) {
+								Element cancelEle = tds.get(j).select("a").first();
+								//撤单操作
+								if( null != cancelEle ){
+									String[] href = cancelEle.attr("href").split("/");
+									rowJson.put(columns[j], "<a href=\"javascript:void();\" onclick=\"cancelOrder('"+href[href.length-1]+"')\">撤单</a>");
+								}else{
+									rowJson.put(columns[j], tds.get(j).html());
+								}
+							}
+							rowsJson.add(rowJson);
+						}
+						return new Resp(ErrorCode.SUCCESS,"success",rowsJson);
+					}finally{
+						response.close();
+					}
+				}
+			});
+		}finally{
+			httpclient.close();
+		}
 	}
 }

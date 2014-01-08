@@ -1,6 +1,8 @@
 package com.btcoin.service.impl;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +12,7 @@ import java.util.Scanner;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.NoHttpResponseException;
@@ -25,22 +28,26 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import com.btcoin.common.ErrorCode;
 import com.btcoin.common.JredisManager;
 import com.btcoin.common.Resp;
-import com.btcoin.service.AbstractBtcWeb;
+import com.btcoin.service.AbstractBTCWeb;
 import com.btcoin.utils.StringUtil;
 
-public class OkcoinWeb extends AbstractBtcWeb{
+public class OKCoinWeb extends AbstractBTCWeb{
 	
-	private static final Logger log = Logger.getLogger(OkcoinWeb.class);
+	private static final Logger log = Logger.getLogger(OKCoinWeb.class);
 	private static final String login_url = "https://www.okcoin.com/login/index.do?random=13";
 	private static final String buyOrder_url = "https://www.okcoin.com/trade/buyBtcSubmit.do";
 	private static final String sellOrder_url = "https://www.okcoin.com/trade/sellBtcSubmit.do";
-	private static final String cancelOrder_url = "";
+	//private static final String cancelOrder_url = "";
 	private static final String getMarketDepth_url = "https://www.okcoin.com/api/depth.do";
-	private static final String getOrders_url = "";
+	private static final String getOrders_url = "https://www.okcoin.com/entrust.do";
 	private static final String getTicker_url = "https://www.okcoin.com/ticker.do";
 	public static final String WEB_SERVICE_NAME = "okcoin";
 
@@ -179,7 +186,6 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			int symbol = 0;
 			String tradePwd = params.getString("tradepwd");
 			final String username = params.getString("username");
-			final String password = params.getString("password");
 			
 			List<NameValuePair> nvps = new ArrayList <NameValuePair>();  
 			nvps.add(new BasicNameValuePair("tradeAmount", amount+""));  
@@ -321,8 +327,6 @@ public class OkcoinWeb extends AbstractBtcWeb{
 			httpPost.setHeader("Referer","https://www.okcoin.com/");
 			
 			final String username = params.getString("username");
-			final String password = params.getString("password");
-			
 			//读取redis用户Cookie
 			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
 			if( cookie != null ){
@@ -414,8 +418,7 @@ public class OkcoinWeb extends AbstractBtcWeb{
 
 	@Override
 	public Resp cancelOrder(long id, JSONObject params) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		throw new NotImplementedException("交易市场[OKCoin]撤单API未实现,请选择其它交易市场。");
 	}
 
 	@Override
@@ -466,10 +469,84 @@ public class OkcoinWeb extends AbstractBtcWeb{
 	}
 
 	@Override
-	public Resp getOrders(double openOnly, JSONObject params)
+	public Resp getOrders(boolean openOnly, JSONObject params)
 			throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		if(!StringUtil.isJSONObjectOk(params, "username")){
+			log.info("用户名不能为空。");
+			return new Resp(ErrorCode.un_require,"用户名不能为空。");
+		}
+		CloseableHttpClient httpclient = this.getHttpClient();
+		HttpGet httpGet = new HttpGet(getOrders_url);
+		try{
+			httpGet.setHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"); 
+			httpGet.setHeader("Accept-Encoding","gzip, deflate"); 
+			httpGet.setHeader("Accept-Language","zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3"); 
+			httpGet.setHeader("Connection","keep-alive"); 
+			httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0");  
+			httpGet.setHeader("Host","www.okcoin.com");  
+			httpGet.setHeader("Referer","https://www.okcoin.com");
+			String username = params.getString("username");
+			//读取redis用户Cookie
+			String cookie = super.getCookie(String.format("%s:u:%s:cookies", WEB_SERVICE_NAME,username));
+			if( cookie != null ){
+				httpGet.setHeader("Cookie",cookie);
+			}else{
+				 return new Resp(ErrorCode.session_timeout,"会话已过期.");
+			}
+			return httpclient.execute(httpGet, new ResponseHandler<Resp>() {
+				@Override
+				public Resp handleResponse(HttpResponse arg0) throws ClientProtocolException, IOException {
+					CloseableHttpResponse response = (CloseableHttpResponse)arg0;
+					try{
+						StatusLine status = response.getStatusLine();  
+				        if (status.getStatusCode() != 200) {
+				        	log.error(String.format("HTTP response:status code=%s, status message=[%s],获取委托订单失败。", 
+	    							status.getStatusCode(),
+	    							status.getReasonPhrase()));
+				            throw new NoHttpResponseException(  
+				                    "Did not receive successful HTTP response: status code = "  
+				                            + status.getStatusCode() + ", status message = ["  
+				                            + status.getReasonPhrase() + "]");  
+				        }
+						StringBuilder htmlDocument = new StringBuilder();
+						BufferedReader br = null;
+						try{
+							br = new BufferedReader(new InputStreamReader(response.getEntity().getContent(),"utf-8"));
+		                    String line = "";
+		                    while(null != (line=br.readLine())){
+		                    	htmlDocument.append(line);
+		                    }
+						}finally{
+							//关闭流
+		                    if ( null != br )br.close();
+						}
+						if(StringUtil.isNullOrEmpty(htmlDocument)){
+							return new Resp(ErrorCode.FAILURE,"无返回结果");
+						}
+						String[] columns = {"date","type","amount_original","price_original","amount","price","unfillamount","status"};
+						Document doc = Jsoup.parse(htmlDocument.toString());
+						Element dataTable = doc.select("div[class=Tenbody] table").first();
+						JSONArray dataJson = new JSONArray();
+						if( null != dataTable ){
+							Elements trTagList = dataTable.getElementsByTag("tr");
+							for (Element tr : trTagList) {
+								JSONObject rowJson = new JSONObject();
+								Elements tdTagList = tr.getElementsByTag("td");
+								for (int j = 0,k = tdTagList.size(); j < k; j++) {
+									rowJson.put(columns[j], tdTagList.get(j).text());
+								}
+								dataJson.add(rowJson);
+							}
+						}
+						return new Resp(ErrorCode.SUCCESS,"查询成功",dataJson);
+					}finally{
+						response.close();
+					}
+				}
+			});
+		}finally{
+			httpclient.close();
+		}
 	}
 
 	@Override

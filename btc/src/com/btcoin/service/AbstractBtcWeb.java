@@ -31,19 +31,19 @@ import com.btcoin.common.EnumConfig;
 import com.btcoin.common.JredisManager;
 import com.btcoin.common.Resp;
 import com.btcoin.common.SystemConfig;
-import com.btcoin.exception.BtcoinException;
+import com.btcoin.exception.BTCException;
 import com.btcoin.utils.PropertiesUtil;
 
-public abstract class AbstractBtcWeb {
+public abstract class AbstractBTCWeb {
 	
-	private static final Logger log = Logger.getLogger(AbstractBtcWeb.class);
+	private static final Logger log = Logger.getLogger(AbstractBTCWeb.class);
 	
 	/**
 	 * 从redist获取cookies
 	 * @return
-	 * @throws BtcoinException 
+	 * @throws BTCException 
 	 */
-	protected String getCookie(String key) throws BtcoinException {
+	protected String getCookie(String key) throws BTCException {
 		//读取redis用户Cookie
 		JredisManager redisManager = JredisManager.getInstance();
 		String data = redisManager.getJedis().get(key);
@@ -154,7 +154,7 @@ public abstract class AbstractBtcWeb {
 	 * @param password 密码
 	 * @return
 	 */
-	public abstract Resp login(String username,String password) throws IOException,BtcoinException;
+	public abstract Resp login(String username,String password) throws IOException,BTCException;
 	
 	/**
 	 * 下比特币买单
@@ -163,9 +163,9 @@ public abstract class AbstractBtcWeb {
 	 * @param params
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp buyOrder(double price,double amount,JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp buyOrder(double price,double amount,JSONObject params) throws IOException,BTCException;
 	
 	/**
 	 * 下比特币卖单。
@@ -174,9 +174,9 @@ public abstract class AbstractBtcWeb {
 	 * @param params
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp sellOrder(double price,double amount,JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp sellOrder(double price,double amount,JSONObject params) throws IOException,BTCException;
 	
 	/**
 	 * 取消一个还未完全成交的挂单，其状态应该为“open”。
@@ -184,18 +184,18 @@ public abstract class AbstractBtcWeb {
 	 * @param params
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp cancelOrder(long id,JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp cancelOrder(long id,JSONObject params) throws IOException,BTCException;
 	
 	/**
 	 * 获得完整的市场深度。返回全部尚未成交的买单和卖单。
 	 * @param params
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp getMarketDepth(JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp getMarketDepth(JSONObject params) throws IOException,BTCException;
 	
 	/**
 	 * 获得全部挂单的状态。
@@ -203,14 +203,14 @@ public abstract class AbstractBtcWeb {
 	 * @param params
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp getOrders(double openOnly,JSONObject params) throws IOException,BtcoinException;
+	public abstract Resp getOrders(boolean openOnly,JSONObject params) throws IOException,BTCException;
 	/**
 	 * 获取实时行情。
 	 * @return
 	 * @throws IOException
-	 * @throws BtcoinException
+	 * @throws BTCException
 	 */
-	public abstract Resp getTicker()throws IOException,BtcoinException;
+	public abstract Resp getTicker()throws IOException,BTCException;
 }

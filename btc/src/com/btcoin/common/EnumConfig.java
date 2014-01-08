@@ -2,7 +2,7 @@ package com.btcoin.common;
 
 public enum EnumConfig{
 	
-	FILE_SYSCONF_PROPERTIES("sysconf.properties"),
+	FILE_SYSCONF_PROPERTIES("config.properties"),
 	
 	enabled_proxy("enabled_proxy"),
 	proxy_host("proxy_host"),

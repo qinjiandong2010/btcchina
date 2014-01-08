@@ -6,25 +6,11 @@
         <pattern>/js/*</pattern>
         <pattern>/css/*</pattern>
         <pattern>/img/*</pattern>
-        <pattern>/downloads/*</pattern>
     </excludes>
-
-    <decorator name="login" page="portal_login.jsp">
-        <pattern>/login.html</pattern>
-        <pattern>/recover/*</pattern>
-    </decorator>
-    
     <decorator name="portal" page="portal.jsp">
-        <pattern>/dashboard.html</pattern>
-        <pattern>/category/*</pattern>
-        <pattern>/accounts/*</pattern>
-        <pattern>/brand/*</pattern>
-        <pattern>/goods/*</pattern>
-        <pattern>/shop/*</pattern>
-        <pattern>/menu/*</pattern>
-        <pattern>/role/*</pattern>
+        <pattern>/</pattern>
+        <pattern>/trade/*</pattern>
+        <pattern>/data/*</pattern>
         <pattern>/errors/*</pattern>
-        <pattern>/result/*</pattern>
     </decorator>
-
 </decorators>

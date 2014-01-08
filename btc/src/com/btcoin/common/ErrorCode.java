@@ -55,5 +55,9 @@ public class ErrorCode {
 	/**
 	 * 数量必须项
 	 */
-	public static final int amount_require=110;
+	public static final int amount_require=111;
+	/**
+	 * 交易市场必须项
+	 */
+	public static final int market_require=112;
 }

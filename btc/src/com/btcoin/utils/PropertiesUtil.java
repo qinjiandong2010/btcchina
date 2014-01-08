@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
-import org.jsoup.Jsoup;
 
 public class PropertiesUtil {
 	private static Map<String,Properties> propertiesMap = new HashMap<String, Properties>();
